@@ -16,6 +16,9 @@ namespace SpriteSheetMaker
         {
             InitializeComponent();
 
+            animationStyle = AnimationStyle.Looping;
+            animationDirection = AnimationDirection.Forward;
+
             // Initialize the timer to 24 fps
             animationIntervalTimer = new System.Timers.Timer(1000.0 / (double)intervalNumberPicker.Value);
             animationIntervalTimer.Elapsed += new System.Timers.ElapsedEventHandler(OnFrameIntervalEvent);
@@ -84,13 +87,52 @@ namespace SpriteSheetMaker
 
         private int currentSpriteIndex;
 
+        enum AnimationDirection
+        {
+            Forward = 1,
+            Backward = -1
+        }
+
+        AnimationDirection animationDirection;
+
         private void stepAnimForward()
         {
             // Increment the current index, and then make it wrap around
-            currentSpriteIndex = ++currentSpriteIndex % imageListBox.Items.Count;
+            //currentSpriteIndex = ++currentSpriteIndex % imageListBox.Items.Count;
+            currentSpriteIndex += (int)animationDirection;
+
+            // If the index is going to go out of bounds, fix it
+            if (currentSpriteIndex < 0 || currentSpriteIndex > imageListBox.Items.Count - 1)
+            {
+                switch (animationStyle)
+                {
+                    case AnimationStyle.Looping:
+                        currentSpriteIndex = 0;
+                        break;
+                    case AnimationStyle.PingPong:
+                        switch (animationDirection)
+                        {
+                            case AnimationDirection.Forward:
+                                animationDirection = AnimationDirection.Backward;
+                                break;
+                            case AnimationDirection.Backward:
+                                animationDirection = AnimationDirection.Forward;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        // Advance the index in the correct direction to avoid an indexing error
+                        // Advance by 2 to keep the the last frame from being repeated
+                        currentSpriteIndex += (int)animationDirection * 2;
+                        break;
+                    default:
+                        break;
+                }
+            }
 
             // Get the new image that it's pointing to
-            ImageFile file = (ImageFile) imageListBox.Items[currentSpriteIndex];
+            ImageFile file = (ImageFile)imageListBox.Items[currentSpriteIndex];
 
             // display the picture in the pic box
             displayPicture(file);
@@ -157,6 +199,135 @@ namespace SpriteSheetMaker
             animationIntervalTimer.Interval = 1000.0 / framesPerSecond;
         }
 
+        Color frameColor;
+
+        private void pickColorFromChooser()
+        {
+            colorPicker.Color = frameColorPreviewPanel.BackColor;
+            if (colorPicker.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                frameColor = colorPicker.Color;
+                frameColorPreviewPanel.BackColor = frameColor;
+            }
+        }
+
+        enum SpriteSheetDirection
+        {
+            Horizontal,
+            Vertical
+        }
+
+        private void makeSpriteSheet(SpriteSheetDirection direction, int pixelBuffer, Color bufferColor, string filename, IList<ImageFile> frames)
+        {
+            // Create an array of images representing the frames and fill it with them
+            Image[] frameArray = new Image[frames.Count];
+            for (int i = 0; i < frameArray.Length; i++)
+			{
+                frameArray[i] = Bitmap.FromFile(frames[i].Path);
+			}
+
+            // longDimension = length of all frames + pixelBuffer * (number of frames - 1)
+            int longDimension = frameArray.Sum(frame => (direction == SpriteSheetDirection.Horizontal? frame.Width : frame.Height));
+            longDimension += pixelBuffer * (frameArray.Length - 1);
+            // Short dimension = max value of the frame's side that is opposite the direction
+            int shortDimension = frameArray.Max(frame => (direction == SpriteSheetDirection.Vertical? frame.Width : frame.Height));
+
+            // Make the bitmap
+            Bitmap output = null;
+
+            switch (direction)
+            {
+                case SpriteSheetDirection.Horizontal:
+                    output = new Bitmap(longDimension, shortDimension);
+                    break;
+                case SpriteSheetDirection.Vertical:
+                    output = new Bitmap(shortDimension, longDimension);
+                    break;
+                default:
+                    break;
+            }
+
+            // Make the graphics object and clear it with the frame color
+            Graphics g = Graphics.FromImage(output);
+            g.Clear(bufferColor);
+
+            int longOffset = 0;
+            for (int i = 0; i < frameArray.Length; i++)
+            {
+                // offset for top left corner = max of the short dimension / 2 - frames short dimension / 2
+                int shortOffset = shortDimension / 2 - (direction == SpriteSheetDirection.Vertical ? frameArray[i].Width : frameArray[i].Height) / 2;
+
+                Point topLeftPoint = new Point();
+
+                switch (direction)
+                {
+                    case SpriteSheetDirection.Horizontal:
+                        topLeftPoint.Y = shortOffset;
+                        topLeftPoint.X = longOffset;
+                        break;
+                    case SpriteSheetDirection.Vertical:
+                        topLeftPoint.X = shortOffset;
+                        topLeftPoint.Y = longOffset;
+                        break;
+                    default:
+                        break;
+                }
+
+                g.DrawImage(frameArray[i], topLeftPoint);
+
+                longOffset += (direction == SpriteSheetDirection.Horizontal ? frameArray[i].Width : frameArray[i].Height);
+                longOffset += pixelBuffer;
+            }
+
+            // Save the bitmap to the file specified
+            output.Save(filename);
+
+            // Create an info file to accompany the bitmap
+            makeInfoFile(frames, output.Size, (int)intervalNumberPicker.Value, animationStyle, filename, bufferColor, pixelBuffer);
+
+            // Clean up the stuff left over
+            for (int i = 0; i < frameArray.Length; i++)
+            {
+                frameArray[i].Dispose();
+            }
+
+            g.Dispose();
+            output.Dispose();
+        }
+
+        private void makeInfoFile(IList<ImageFile> frames, Size imageSize,
+            int framesPerSecond, AnimationStyle animationStyle, string filename,
+            Color pixelBufferColor, int pixelBufferSize)
+        {
+            List<string> fileLines = new List<string>();
+
+            string imageFileName = System.IO.Path.GetFileName(filename);
+
+            fileLines.Add(String.Format("File Name: {0}", imageFileName));
+            fileLines.Add(String.Format("File Dimensions: {0}", imageSize));
+            fileLines.Add(String.Format("Number of frames: {0}", frames.Count));
+            fileLines.Add(String.Format("Pixel Buffer Size: {0}", pixelBufferSize));
+            fileLines.Add(String.Format("Pixel Buffer Color: {0}", pixelBufferColor.Name));
+
+            fileLines.Add(String.Format("Animation Type: {0}", System.Enum.GetName(typeof(AnimationStyle), animationStyle)));
+            fileLines.Add(String.Format("Frames per second: {0}", framesPerSecond));
+            fileLines.Add(String.Format("Duration of frame in milliseconds: {0}", 1000 / framesPerSecond));
+            fileLines.Add(string.Empty);
+            fileLines.Add("List of frame filenames:");
+
+            int frameNumber = 1;
+            foreach (ImageFile file in frames)
+            {
+                fileLines.Add(String.Format("{0,3}: {1}", frameNumber++, file.Filename));
+            }
+
+            fileLines.Add(string.Empty);
+            fileLines.Add(String.Format("Created on: {0}", DateTime.Now.ToString()));
+
+            string textFilePath = System.IO.Path.ChangeExtension(filename, ".txt");
+            File.WriteAllLines(textFilePath, fileLines);
+        }
+
         private void OnFrameIntervalEvent(object source, System.Timers.ElapsedEventArgs e)
         {
             stepAnimForward();
@@ -217,6 +388,52 @@ namespace SpriteSheetMaker
         private void intervalNumberPicker_ValueChanged(object sender, EventArgs e)
         {
             updateFPSTiming((int)intervalNumberPicker.Value);
+        }
+
+        enum AnimationStyle
+        {
+            Looping,
+            PingPong
+        }
+
+        private AnimationStyle animationStyle;
+
+        private void animationRButton_CheckedChanged(object sender, EventArgs e)
+        {
+            RadioButton rb = (RadioButton)sender;
+
+            switch (rb.Name)
+            {
+                case "animationLoopRButton":
+                    animationStyle = AnimationStyle.Looping;
+                    animationDirection = AnimationDirection.Forward;
+                    break;
+                case "animationPingPongRButton":
+                    animationStyle = AnimationStyle.PingPong;
+                    break;
+                default:
+                    break;
+            }
+
+        }
+
+        private void pickFrameColorButton_Click(object sender, EventArgs e)
+        {
+            pickColorFromChooser();
+        }
+
+        private void saveSheetButton_Click(object sender, EventArgs e)
+        {
+            // Get the direction that they want to use
+            SpriteSheetDirection direction = horizontalSheetRButton.Checked? SpriteSheetDirection.Horizontal : SpriteSheetDirection.Vertical;
+
+            if (saveSheetDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                string filename = saveSheetDialog.FileName;
+                // Get the files to use and turn them into a list of ImageFiles
+                List<ImageFile> files = new List<ImageFile>(imageListBox.Items.Cast<ImageFile>());
+                makeSpriteSheet(direction, (int)frameBufferNumberPicker.Value, frameColor, filename, files);
+            }
         }
     }
 }
