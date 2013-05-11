@@ -28,8 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.spritePictureBox = new System.Windows.Forms.PictureBox();
             this.imageListBox = new System.Windows.Forms.ListBox();
             this.label1 = new System.Windows.Forms.Label();
             this.saveSheetButton = new System.Windows.Forms.Button();
@@ -37,7 +36,6 @@
             this.playPauseButton = new System.Windows.Forms.Button();
             this.stepBackButton = new System.Windows.Forms.Button();
             this.openButton = new System.Windows.Forms.Button();
-            this.animationIntervalTimer = new System.Windows.Forms.Timer(this.components);
             this.openImagesDialog = new System.Windows.Forms.OpenFileDialog();
             this.colorPicker = new System.Windows.Forms.ColorDialog();
             this.saveSheetDialog = new System.Windows.Forms.SaveFileDialog();
@@ -47,18 +45,20 @@
             this.label2 = new System.Windows.Forms.Label();
             this.intervalNumberPicker = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.spritePictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.frameTrackBar)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.intervalNumberPicker)).BeginInit();
             this.SuspendLayout();
             // 
-            // pictureBox1
+            // spritePictureBox
             // 
-            this.pictureBox1.Location = new System.Drawing.Point(12, 12);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(229, 225);
-            this.pictureBox1.TabIndex = 0;
-            this.pictureBox1.TabStop = false;
+            this.spritePictureBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.spritePictureBox.Location = new System.Drawing.Point(12, 12);
+            this.spritePictureBox.Name = "spritePictureBox";
+            this.spritePictureBox.Size = new System.Drawing.Size(229, 225);
+            this.spritePictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.spritePictureBox.TabIndex = 0;
+            this.spritePictureBox.TabStop = false;
             // 
             // imageListBox
             // 
@@ -81,7 +81,7 @@
             // 
             this.saveSheetButton.Location = new System.Drawing.Point(12, 341);
             this.saveSheetButton.Name = "saveSheetButton";
-            this.saveSheetButton.Size = new System.Drawing.Size(75, 23);
+            this.saveSheetButton.Size = new System.Drawing.Size(98, 23);
             this.saveSheetButton.TabIndex = 3;
             this.saveSheetButton.Text = "Save As...";
             this.saveSheetButton.UseVisualStyleBackColor = true;
@@ -94,6 +94,7 @@
             this.stepForwardButton.TabIndex = 4;
             this.stepForwardButton.Text = ">>";
             this.stepForwardButton.UseVisualStyleBackColor = true;
+            this.stepForwardButton.Click += new System.EventHandler(this.stepForwardButton_Click);
             // 
             // playPauseButton
             // 
@@ -101,8 +102,9 @@
             this.playPauseButton.Name = "playPauseButton";
             this.playPauseButton.Size = new System.Drawing.Size(75, 23);
             this.playPauseButton.TabIndex = 5;
-            this.playPauseButton.Text = "Play/Pause";
+            this.playPauseButton.Text = "Play";
             this.playPauseButton.UseVisualStyleBackColor = true;
+            this.playPauseButton.Click += new System.EventHandler(this.playPauseButton_Click);
             // 
             // stepBackButton
             // 
@@ -112,15 +114,17 @@
             this.stepBackButton.TabIndex = 6;
             this.stepBackButton.Text = "<<";
             this.stepBackButton.UseVisualStyleBackColor = true;
+            this.stepBackButton.Click += new System.EventHandler(this.stepBackButton_Click);
             // 
             // openButton
             // 
             this.openButton.Location = new System.Drawing.Point(12, 312);
             this.openButton.Name = "openButton";
-            this.openButton.Size = new System.Drawing.Size(75, 23);
+            this.openButton.Size = new System.Drawing.Size(98, 23);
             this.openButton.TabIndex = 7;
             this.openButton.Text = "Open Images...";
             this.openButton.UseVisualStyleBackColor = true;
+            this.openButton.Click += new System.EventHandler(this.openButton_Click);
             // 
             // openImagesDialog
             // 
@@ -134,6 +138,7 @@
             this.frameTrackBar.Name = "frameTrackBar";
             this.frameTrackBar.Size = new System.Drawing.Size(229, 45);
             this.frameTrackBar.TabIndex = 8;
+            this.frameTrackBar.Scroll += new System.EventHandler(this.frameTrackBar_Scroll);
             // 
             // horizontalSheetRButton
             // 
@@ -178,19 +183,20 @@
             this.intervalNumberPicker.Size = new System.Drawing.Size(75, 20);
             this.intervalNumberPicker.TabIndex = 12;
             this.intervalNumberPicker.Value = new decimal(new int[] {
-            1,
+            24,
             0,
             0,
             0});
+            this.intervalNumberPicker.ValueChanged += new System.EventHandler(this.intervalNumberPicker_ValueChanged);
             // 
             // label3
             // 
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(339, 81);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(111, 13);
+            this.label3.Size = new System.Drawing.Size(99, 13);
             this.label3.TabIndex = 13;
-            this.label3.Text = "Milliseconds per frame";
+            this.label3.Text = "Frames per Second";
             // 
             // spriteSheetForm
             // 
@@ -210,10 +216,10 @@
             this.Controls.Add(this.saveSheetButton);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.imageListBox);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.spritePictureBox);
             this.Name = "spriteSheetForm";
             this.Text = "Sprite Sheet Maker";
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.spritePictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.frameTrackBar)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.intervalNumberPicker)).EndInit();
             this.ResumeLayout(false);
@@ -223,7 +229,7 @@
 
         #endregion
 
-        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox spritePictureBox;
         private System.Windows.Forms.ListBox imageListBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button saveSheetButton;
@@ -231,7 +237,6 @@
         private System.Windows.Forms.Button playPauseButton;
         private System.Windows.Forms.Button stepBackButton;
         private System.Windows.Forms.Button openButton;
-        private System.Windows.Forms.Timer animationIntervalTimer;
         private System.Windows.Forms.OpenFileDialog openImagesDialog;
         private System.Windows.Forms.ColorDialog colorPicker;
         private System.Windows.Forms.SaveFileDialog saveSheetDialog;
